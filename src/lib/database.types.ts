@@ -29,6 +29,7 @@ export interface Database {
           id: string;
           title: string;
           model_id: string;
+          user_id: string;
           created_at: string | null;
           updated_at: string | null;
         };
@@ -36,6 +37,7 @@ export interface Database {
           id?: string;
           title?: string;
           model_id: string;
+          user_id: string;
           created_at?: string | null;
           updated_at?: string | null;
         };
@@ -43,6 +45,7 @@ export interface Database {
           id?: string;
           title?: string;
           model_id?: string;
+          user_id?: string;
           created_at?: string | null;
           updated_at?: string | null;
         };
