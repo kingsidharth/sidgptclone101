@@ -1,37 +1,6 @@
-import { Model } from '../types';
+import { getModels } from '../services/database';
 
-// Load models from YAML file (simulated with hardcoded data)
-export function loadModels(): Model[] {
-  return [
-    {
-      id: "gpt-4",
-      name: "GPT-4",
-      contextWindow: 8192,
-      costPer1k: 0.03
-    },
-    {
-      id: "gpt-4-turbo",
-      name: "GPT-4 Turbo",
-      contextWindow: 128000,
-      costPer1k: 0.01
-    },
-    {
-      id: "gpt-3.5-turbo",
-      name: "GPT-3.5 Turbo",
-      contextWindow: 4096,
-      costPer1k: 0.002
-    },
-    {
-      id: "gpt-4o",
-      name: "GPT-4o",
-      contextWindow: 128000,
-      costPer1k: 0.005
-    },
-    {
-      id: "gpt-4o-mini",
-      name: "GPT-4o Mini",
-      contextWindow: 128000,
-      costPer1k: 0.0002
-    }
-  ];
+// Load models from database
+export async function loadModels() {
+  return await getModels();
 }

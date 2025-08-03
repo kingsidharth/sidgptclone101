@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { X, Key, AlertCircle } from 'lucide-react';
+import { X, Key, AlertCircle, LogOut } from 'lucide-react';
+import { supabase } from '../lib/supabase';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -18,6 +19,10 @@ export function SettingsModal({ isOpen, onClose, apiKey, onApiKeyChange }: Setti
     onClose();
   };
 
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    onClose();
+  };
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
@@ -53,6 +58,16 @@ export function SettingsModal({ isOpen, onClose, apiKey, onApiKeyChange }: Setti
                 </div>
               </div>
             </div>
+          </div>
+
+          <div className="pt-4 border-t border-gray-200">
+            <button
+              onClick={handleSignOut}
+              className="flex items-center space-x-2 w-full px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+            >
+              <LogOut size={16} />
+              <span>Sign Out</span>
+            </button>
           </div>
         </div>
 

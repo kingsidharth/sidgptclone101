@@ -4,6 +4,7 @@ import { Header } from './components/Header';
 import { Sidebar } from './components/Sidebar';
 import { ChatArea } from './components/ChatArea';
 import { SettingsModal } from './components/SettingsModal';
+import { AuthWrapper } from './components/AuthWrapper';
 import { Conversation, Message, ChatState } from './types';
 import { loadModels } from './utils/models';
 import { 
@@ -27,18 +28,31 @@ function App() {
     error: null,
   });
   
-  const [models] = useState(loadModels());
+  const [models, setModels] = useState<any[]>([]);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [apiKey, setApiKey] = useState('');
 
   // Load data on mount
   useEffect(() => {
-    const conversations = loadConversations();
-    const storedApiKey = localStorage.getItem(STORAGE_API_KEY) || '';
-    
-    setState(prev => ({ ...prev, conversations }));
-    setApiKey(storedApiKey);
+    const loadData = async () => {
+      try {
+        const [conversations, modelsData] = await Promise.all([
+          loadConversations(),
+          loadModels()
+        ]);
+        const storedApiKey = localStorage.getItem(STORAGE_API_KEY) || '';
+        
+        setState(prev => ({ ...prev, conversations }));
+        setModels(modelsData);
+        setApiKey(storedApiKey);
+      } catch (error) {
+        console.error('Failed to load data:', error);
+        setState(prev => ({ ...prev, error: 'Failed to load data from database' }));
+      }
+    };
+
+    loadData();
   }, []);
 
   const currentConversation = state.conversations.find(
@@ -47,14 +61,14 @@ function App() {
 
   const selectedModel = models.find(m => m.id === state.selectedModel) || models[0];
 
-  const updateConversationTitle = (conversation: Conversation) => {
+  const updateConversationTitle = async (conversation: Conversation) => {
     if (conversation.messages.length === 1) {
       const firstMessage = conversation.messages[0].content;
       const title = firstMessage.length > 50 
         ? firstMessage.substring(0, 50) + '...'
         : firstMessage;
       
-      updateConversation(conversation.id, { title });
+      await updateConversation(conversation.id, { title });
       setState(prev => ({
         ...prev,
         conversations: prev.conversations.map(c =>
@@ -64,33 +78,43 @@ function App() {
     }
   };
 
-  const handleNewChat = () => {
-    const newConversation = createConversation('New Chat', state.selectedModel);
-    setState(prev => ({
-      ...prev,
-      conversations: [newConversation, ...prev.conversations],
-      currentConversationId: newConversation.id,
-    }));
+  const handleNewChat = async () => {
+    try {
+      const newConversation = await createConversation('New Chat', state.selectedModel);
+      setState(prev => ({
+        ...prev,
+        conversations: [newConversation, ...prev.conversations],
+        currentConversationId: newConversation.id,
+      }));
+    } catch (error) {
+      console.error('Failed to create conversation:', error);
+      setState(prev => ({ ...prev, error: 'Failed to create new conversation' }));
+    }
   };
 
   const handleSelectConversation = (conversationId: string) => {
     setState(prev => ({ ...prev, currentConversationId: conversationId }));
   };
 
-  const handleDeleteConversation = (conversationId: string) => {
-    deleteConversation(conversationId);
-    setState(prev => {
-      const filtered = prev.conversations.filter(c => c.id !== conversationId);
-      const newCurrentId = prev.currentConversationId === conversationId 
-        ? (filtered[0]?.id || null)
-        : prev.currentConversationId;
-      
-      return {
-        ...prev,
-        conversations: filtered,
-        currentConversationId: newCurrentId,
-      };
-    });
+  const handleDeleteConversation = async (conversationId: string) => {
+    try {
+      await deleteConversation(conversationId);
+      setState(prev => {
+        const filtered = prev.conversations.filter(c => c.id !== conversationId);
+        const newCurrentId = prev.currentConversationId === conversationId 
+          ? (filtered[0]?.id || null)
+          : prev.currentConversationId;
+        
+        return {
+          ...prev,
+          conversations: filtered,
+          currentConversationId: newCurrentId,
+        };
+      });
+    } catch (error) {
+      console.error('Failed to delete conversation:', error);
+      setState(prev => ({ ...prev, error: 'Failed to delete conversation' }));
+    }
   };
 
   const handleModelChange = (modelId: string) => {
@@ -113,12 +137,18 @@ function App() {
     
     // Create new conversation if none exists
     if (!conversation) {
-      conversation = createConversation('New Chat', state.selectedModel);
-      setState(prev => ({
-        ...prev,
-        conversations: [conversation, ...prev.conversations],
-        currentConversationId: conversation.id,
-      }));
+      try {
+        conversation = await createConversation('New Chat', state.selectedModel);
+        setState(prev => ({
+          ...prev,
+          conversations: [conversation, ...prev.conversations],
+          currentConversationId: conversation.id,
+        }));
+      } catch (error) {
+        console.error('Failed to create conversation:', error);
+        setState(prev => ({ ...prev, error: 'Failed to create conversation' }));
+        return;
+      }
     }
 
     setState(prev => ({ ...prev, isLoading: true, error: null }));
@@ -134,7 +164,7 @@ function App() {
       };
 
       // Add user message to conversation
-      addMessage(conversation.id, userMessage);
+      await addMessage(conversation.id, userMessage);
       const updatedMessages = [...conversation.messages, userMessage];
       
       setState(prev => ({
@@ -147,7 +177,7 @@ function App() {
       }));
 
       // Update conversation title if it's the first message
-      updateConversationTitle({ ...conversation, messages: updatedMessages });
+      await updateConversationTitle({ ...conversation, messages: updatedMessages });
 
       // Send to OpenAI
       const response = await sendMessage(updatedMessages, state.selectedModel, apiKey);
@@ -162,7 +192,7 @@ function App() {
       };
 
       // Add assistant message to conversation
-      addMessage(conversation.id, assistantMessage);
+      await addMessage(conversation.id, assistantMessage);
       
       setState(prev => ({
         ...prev,
@@ -188,6 +218,7 @@ function App() {
   };
 
   return (
+    <AuthWrapper>
     <div className="h-screen flex bg-gray-50">
       {/* Mobile sidebar toggle */}
       <button
@@ -241,6 +272,7 @@ function App() {
         onApiKeyChange={handleApiKeyChange}
       />
     </div>
+    </AuthWrapper>
   );
 }
 
